@@ -1,0 +1,223 @@
+/* ============================================================
+   Claude App Theme — a portable design system
+   Use this on any HTML page or Flask (Jinja) template.
+   Just <link rel="stylesheet" href="/static/theme.css">
+   ============================================================ */
+
+:root{
+  /* Brand / ink */
+  --ink:#0B1F3A;       /* primary dark (topbar, headings) */
+  --ink2:#16335A;      /* secondary dark */
+  --purple:#5B2A86;    /* accent 1 */
+  --teal:#1F8A8A;      /* accent 2 / primary action */
+
+  /* Surfaces */
+  --bg:#EAEEF3;        /* page background */
+  --panel:#FFFFFF;     /* card / panel background */
+  --line:#D7DCE3;      /* borders */
+  --muted:#5A6675;     /* secondary text */
+  --muted2:#8A93A1;    /* tertiary text */
+
+  /* Status / scale colours (red -> green) */
+  --r0:#C0392B; --r1:#DB7A2A; --r2:#C99413; --r3:#5FA63D; --r4:#2E7D32;
+  --ok:#2E7D32; --warn:#C99413; --bad:#C0392B; --info:#1F8A8A;
+
+  /* Typography */
+  --sans: system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono: ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+
+  /* Misc */
+  --radius:12px;
+  --shadow:0 1px 2px rgba(11,31,58,.06),0 8px 24px rgba(11,31,58,.06);
+}
+
+/* ---------- Reset / base ---------- */
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--sans);color:var(--ink);background:var(--bg);
+  font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit}
+a{color:var(--teal)}
+::selection{background:#d8c8ea}
+
+/* ---------- Topbar ---------- */
+.topbar{
+  position:sticky;top:0;z-index:40;background:var(--ink);color:#fff;
+  display:flex;align-items:center;gap:18px;padding:12px 20px;
+  border-bottom:3px solid var(--purple);
+}
+.brand{display:flex;flex-direction:column;line-height:1.15}
+.brand .t{font-weight:700;font-size:15px;letter-spacing:.2px}
+.brand .s{font-size:11.5px;color:#aebbcd;letter-spacing:.3px;text-transform:uppercase}
+.spacer{flex:1}
+
+/* Topbar progress bar (optional) */
+.gprog{display:flex;align-items:center;gap:10px;min-width:0}
+.gprog .bar{width:160px;height:7px;border-radius:6px;background:#1d3656;overflow:hidden}
+.gprog .bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),#46c2c2);transition:width .35s ease}
+.gprog .lbl{font-size:12px;color:#cdd6e2;white-space:nowrap}
+
+/* ---------- Buttons ---------- */
+.tools{display:flex;gap:8px}
+.btn{
+  border:1px solid transparent;border-radius:9px;padding:8px 13px;
+  font-size:13px;font-weight:600;cursor:pointer;
+  display:inline-flex;align-items:center;gap:7px;transition:.15s;
+  text-decoration:none;
+}
+.btn:focus-visible{outline:3px solid #8ec7ff;outline-offset:1px}
+.btn-ghost{background:#13294a;color:#dfe7f0;border-color:#274468}
+.btn-ghost:hover{background:#1b3457}
+.btn-primary{background:var(--teal);color:#fff}
+.btn-primary:hover{background:#1a7878}
+.btn-purple{background:var(--purple);color:#fff}
+.btn-purple:hover{background:#4a2270}
+.btn-outline{background:#fff;color:var(--ink);border-color:var(--line)}
+.btn-outline:hover{border-color:#b9c2cf}
+.btn:disabled{opacity:.4;cursor:default}
+
+/* ---------- Layout: sidebar + main ---------- */
+.app{display:grid;grid-template-columns:248px 1fr;align-items:start}
+@media (max-width:860px){.app{grid-template-columns:1fr}.rail{display:none}}
+
+.rail{
+  position:sticky;top:60px;align-self:start;height:calc(100vh - 60px);
+  overflow:auto;background:#fff;border-right:1px solid var(--line);padding:16px 12px;
+}
+.rail h2{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted2);margin:6px 8px 10px}
+
+.navitem{
+  display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+  background:none;border:0;border-radius:10px;padding:9px 9px;cursor:pointer;
+  color:var(--ink);margin-bottom:3px;transition:.12s;text-decoration:none;
+}
+.navitem:hover{background:#f1f4f8}
+.navitem.active{background:#eef0fb;box-shadow:inset 0 0 0 1px #d9def4}
+.navitem .chip{width:30px;height:30px;flex:none;border-radius:8px;display:grid;place-items:center;font-weight:800;color:#fff;font-size:14px;background:var(--ink)}
+.navitem.active .chip{background:var(--purple)}
+.navitem.sum .chip{background:var(--teal);font-size:13px}
+.navitem .meta{min-width:0;flex:1}
+.navitem .nm{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.navitem .pb{height:5px;border-radius:5px;background:#e6e9ef;margin-top:5px;overflow:hidden}
+.navitem .pb i{display:block;height:100%;width:0;background:var(--teal);transition:width .35s}
+.navitem .pc{font-size:11px;color:var(--muted2);margin-top:3px}
+
+.main{padding:26px clamp(18px,4vw,54px) 90px;max-width:1020px}
+.main.wide{max-width:1280px}
+
+/* View switcher (for single-page apps) */
+.view{display:none;animation:fade .25s ease}
+.view.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* ---------- Page / section headers ---------- */
+.pagehead{display:flex;gap:20px;align-items:flex-start;margin:4px 0 26px}
+.pagehead .big{width:64px;height:64px;flex:none;border-radius:16px;display:grid;place-items:center;font-weight:800;font-size:30px;color:#fff;background:linear-gradient(135deg,var(--purple),var(--ink))}
+.pagehead .eyebrow{font-size:11.5px;text-transform:uppercase;letter-spacing:.16em;color:var(--purple);font-weight:700}
+.pagehead h1{margin:4px 0 8px;font-size:27px;line-height:1.15;letter-spacing:-.01em}
+.pagehead p{margin:0;color:var(--muted);max-width:70ch}
+
+.section-label{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--teal);font-weight:700}
+.section-title{margin:3px 0 0;font-size:19px;letter-spacing:-.01em}
+
+/* ---------- Card / panel ---------- */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 20px 6px;margin:16px 0 22px}
+.card > header{display:flex;align-items:baseline;gap:10px;margin-bottom:6px;padding-bottom:12px;border-bottom:1px solid #eef1f5}
+.card > header .ref{font-family:var(--mono);font-size:12px;color:#fff;background:var(--ink2);padding:3px 8px;border-radius:6px;letter-spacing:.02em}
+.card > header h3{margin:0;font-size:16px}
+.card > header .meta-right{margin-left:auto;font-size:12px;color:var(--muted2)}
+.card.flush{padding-bottom:20px}
+
+/* ---------- Forms ---------- */
+.field{margin:14px 0 18px;background:#f7f9fb;border:1px solid #e7ecf1;border-radius:10px;padding:12px 13px}
+.field label{display:block;font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:7px}
+.field label span{font-weight:400;color:var(--muted2)}
+.field input[type=text],.field input[type=email],.field input[type=number],
+.field input[type=password],.field select,.field textarea{
+  width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 11px;
+  font:inherit;font-size:13.5px;color:var(--ink);background:#fff;
+}
+.field textarea{min-height:74px;resize:vertical}
+.field input:focus,.field select:focus,.field textarea:focus{
+  outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(31,138,138,.15);
+}
+
+/* Generic labelled form group (no boxed background) */
+.form-row{margin:0 0 16px}
+.form-row label{display:block;font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:6px}
+.form-row input,.form-row select,.form-row textarea{
+  width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 11px;
+  font:inherit;font-size:13.5px;color:var(--ink);background:#fff;
+}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{
+  outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(31,138,138,.15);
+}
+
+/* ---------- Segmented choice / rating scale ---------- */
+.scalewrap{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap;margin:12px 0 2px}
+.scale{flex:1 1 260px;display:grid;grid-template-columns:repeat(5,1fr);gap:7px}
+.seg{position:relative}
+.seg input{position:absolute;opacity:0;inset:0;cursor:pointer;margin:0}
+.seg label{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;text-align:center;
+  border:1.5px solid var(--line);border-radius:9px;padding:9px 6px;cursor:pointer;background:#fbfcfd;
+  transition:.13s;min-height:58px;
+}
+.seg .num{font-weight:800;font-size:16px;color:var(--muted)}
+.seg .nm{font-size:10.5px;line-height:1.2;color:var(--muted);letter-spacing:.01em}
+.seg label:hover{border-color:#b9c2cf;background:#fff;transform:translateY(-1px)}
+.seg input:focus-visible + label{outline:3px solid #8ec7ff;outline-offset:1px}
+.seg.s0 input:checked + label{background:var(--r0);border-color:var(--r0)}
+.seg.s1 input:checked + label{background:var(--r1);border-color:var(--r1)}
+.seg.s2 input:checked + label{background:var(--r2);border-color:var(--r2)}
+.seg.s3 input:checked + label{background:var(--r3);border-color:var(--r3)}
+.seg.s4 input:checked + label{background:var(--r4);border-color:var(--r4)}
+.seg input:checked + label .num,.seg input:checked + label .nm{color:#fff}
+
+/* ---------- Pager ---------- */
+.pager{display:flex;justify-content:space-between;gap:12px;margin-top:30px}
+.pager button,.pager a{border:1px solid var(--line);background:#fff;border-radius:10px;padding:11px 16px;font-weight:600;font-size:13.5px;cursor:pointer;color:var(--ink);text-decoration:none}
+.pager button:hover:not(:disabled),.pager a:hover{border-color:#b9c2cf}
+.pager button:disabled{opacity:.4;cursor:default}
+
+/* ---------- KPI / summary strip ---------- */
+.overall{display:flex;gap:18px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:20px 22px;margin-bottom:26px}
+.kpi{flex:1;min-width:150px}
+.kpi .k{font-size:11.5px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted2);font-weight:700}
+.kpi .v{font-size:30px;font-weight:800;margin-top:4px;letter-spacing:-.01em}
+
+/* ---------- Pills / badges ---------- */
+.pill{display:inline-block;padding:5px 12px;border-radius:999px;color:#fff;font-weight:700;font-size:13px}
+.b0{background:var(--r0)} .b1{background:var(--r1)} .b2{background:var(--r2)} .b3{background:var(--r3)} .b4{background:var(--r4)} .bn{background:#9aa4b2}
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.badge-ok{background:rgba(46,125,50,.12);color:var(--ok)}
+.badge-warn{background:rgba(201,148,19,.14);color:var(--warn)}
+.badge-bad{background:rgba(192,57,43,.12);color:var(--bad)}
+.badge-info{background:rgba(31,138,138,.12);color:var(--info)}
+
+/* ---------- Alerts / flash messages ---------- */
+.alert{border-radius:10px;padding:12px 14px;margin:0 0 16px;font-size:13.5px;border:1px solid transparent}
+.alert-ok{background:rgba(46,125,50,.08);border-color:rgba(46,125,50,.25);color:#1e5524}
+.alert-warn{background:rgba(201,148,19,.10);border-color:rgba(201,148,19,.3);color:#7a5c0c}
+.alert-bad{background:rgba(192,57,43,.08);border-color:rgba(192,57,43,.25);color:#8a2a20}
+.alert-info{background:rgba(31,138,138,.08);border-color:rgba(31,138,138,.25);color:#155f5f}
+
+/* ---------- Tables ---------- */
+.table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:#fff;box-shadow:var(--shadow)}
+table.dt{width:100%;border-collapse:collapse;font-size:13.5px}
+table.dt th,table.dt td{padding:10px 14px;text-align:left;border-bottom:1px solid #eef1f5}
+table.dt th{background:#f7f9fb;font-size:11.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted2);font-weight:700}
+table.dt tr:last-child td{border-bottom:0}
+table.dt tr:hover td{background:#fafcfe}
+
+/* ---------- Utility ---------- */
+.muted{color:var(--muted)}
+.mono{font-family:var(--mono)}
+.text-center{text-align:center}
+.flex{display:flex}
+.flex-between{display:flex;justify-content:space-between;align-items:center}
+.gap-8{gap:8px} .gap-12{gap:12px} .gap-18{gap:18px}
+.mt-0{margin-top:0} .mt-12{margin-top:12px} .mt-22{margin-top:22px}
+.hidden{display:none !important}
