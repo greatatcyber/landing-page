@@ -1,0 +1,12 @@
+# robots.txt
+
+User-agent: *
+Allow: /
+
+# Disallow admin or private areas (customize as needed)
+Disallow: /admin/
+Disallow: /private/
+Disallow: /tmp/
+
+# Sitemap location
+Sitemap: https://greatatcyber.uk/sitemap.xml
