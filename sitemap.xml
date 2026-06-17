@@ -3,19 +3,25 @@
 
   <url>
     <loc>https://greatatcyber.uk/</loc>
-    <changefreq>monthly</changefreq>
+    <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
 
   <url>
     <loc>https://cafmaturity.greatatcyber.uk/</loc>
-    <changefreq>monthly</changefreq>
+    <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
   <url>
     <loc>https://threat-modelling.greatatcyber.uk/</loc>
-    <changefreq>monthly</changefreq>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://risk-report.greatatcyber.uk/</loc>
+    <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
 
