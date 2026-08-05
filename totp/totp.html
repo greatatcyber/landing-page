@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Cadence — TOTP Authenticator</title>
+
+<!-- ============================================================
+     theme.css is inlined below so this stays a single working file.
+     If you serve this with Flask, delete this <style id="theme">
+     block and link the file instead:
+         <link rel="stylesheet" href="/static/theme.css">
+     ============================================================ -->
+<style id="theme">
+:root{
+  --ink:#0B1F3A; --ink2:#16335A; --purple:#5B2A86; --teal:#1F8A8A;
+  --bg:#EAEEF3; --panel:#FFFFFF; --line:#D7DCE3; --muted:#5A6675; --muted2:#8A93A1;
+  --r0:#C0392B; --r1:#DB7A2A; --r2:#C99413; --r3:#5FA63D; --r4:#2E7D32;
+  --ok:#2E7D32; --warn:#C99413; --bad:#C0392B; --info:#1F8A8A; --red:#AA0000;
+  --sans: system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono: ui-monospace,"SF Mono","Cascadia Code",Menlo,Consolas,monospace;
+  --radius:12px;
+  --shadow:0 1px 2px rgba(11,31,58,.06),0 8px 24px rgba(11,31,58,.06);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{font-family:var(--sans);color:var(--ink);background:var(--bg);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+button{font-family:inherit}
+a{color:var(--teal)}
+::selection{background:#d8c8ea}
+
+.topbar{position:sticky;top:0;z-index:40;background:var(--ink);color:#fff;display:flex;align-items:center;gap:18px;padding:12px 20px;border-bottom:3px solid var(--purple);}
+.brand{display:flex;flex-direction:column;line-height:1.15}
+.brand .t{font-weight:700;font-size:15px;letter-spacing:.2px}
+.brand .s{font-size:11.5px;color:#aebbcd;letter-spacing:.3px;text-transform:uppercase}
+.spacer{flex:1}
+
+.tools{display:flex;gap:8px}
+.btn{border:1px solid transparent;border-radius:9px;padding:8px 13px;font-size:13px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:.15s;text-decoration:none;}
+.btn:focus-visible{outline:3px solid #8ec7ff;outline-offset:1px}
+.btn-ghost{background:#13294a;color:#dfe7f0;border-color:#274468}
+.btn-ghost:hover{background:#1b3457}
+.btn-primary{background:var(--teal);color:#fff}
+.btn-primary:hover{background:#1a7878}
+.btn-purple{background:var(--purple);color:#fff}
+.btn-purple:hover{background:#4a2270}
+.btn-outline{background:#fff;color:var(--ink);border-color:var(--line)}
+.btn-outline:hover{border-color:#b9c2cf}
+.btn:disabled{opacity:.4;cursor:default}
+
+.main{padding:26px clamp(18px,4vw,54px) 90px;max-width:1020px;margin:0 auto}
+
+.pagehead{display:flex;gap:20px;align-items:flex-start;margin:4px 0 26px}
+.pagehead .big{width:64px;height:64px;flex:none;border-radius:16px;display:grid;place-items:center;font-weight:800;font-size:30px;color:#fff;background:linear-gradient(135deg,var(--purple),var(--ink))}
+.pagehead .eyebrow{font-size:11.5px;text-transform:uppercase;letter-spacing:.16em;color:var(--purple);font-weight:700}
+.pagehead h1{margin:4px 0 8px;font-size:27px;line-height:1.15;letter-spacing:-.01em}
+.pagehead p{margin:0;color:var(--muted);max-width:70ch}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 20px 6px;margin:16px 0 22px}
+.card > header{display:flex;align-items:baseline;gap:10px;margin-bottom:6px;padding-bottom:12px;border-bottom:1px solid #eef1f5}
+.card > header .ref{font-family:var(--mono);font-size:12px;color:#fff;background:var(--ink2);padding:3px 8px;border-radius:6px;letter-spacing:.02em}
+.card > header h3{margin:0;font-size:16px}
+.card > header .meta-right{margin-left:auto;font-size:12px;color:var(--muted2)}
+.card.flush{padding-bottom:20px}
+
+.form-row{margin:0 0 16px}
+.form-row label{display:block;font-size:12px;font-weight:700;color:var(--ink2);margin-bottom:6px}
+.form-row input,.form-row select,.form-row textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font:inherit;font-size:13.5px;color:var(--ink);background:#fff;}
+.form-row input:focus,.form-row select:focus,.form-row textarea:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(31,138,138,.15);}
+
+.badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700}
+.badge-ok{background:rgba(46,125,50,.12);color:var(--ok)}
+.badge-warn{background:rgba(201,148,19,.14);color:var(--warn)}
+.badge-info{background:rgba(31,138,138,.12);color:var(--info)}
+.badge-red{background:rgba(255, 0, 0,.14);color:var(--red)}
+
+.alert{border-radius:10px;padding:12px 14px;margin:0 0 16px;font-size:13.5px;border:1px solid transparent}
+.alert-bad{background:rgba(192,57,43,.08);border-color:rgba(192,57,43,.25);color:#8a2a20}
+
+.muted{color:var(--muted)}
+.mono{font-family:var(--mono)}
+.text-center{text-align:center}
+.flex{display:flex}
+.gap-8{gap:8px} .gap-12{gap:12px}
+.mt-22{margin-top:22px}
+.hidden{display:none !important}
+</style>
+
+<!-- component styles for the authenticator, built on the theme tokens -->
+<style id="app">
+#composer{display:none}
+#composer.open{display:block}
+
+.acct-body{display:flex;align-items:center;gap:18px;padding:8px 0 4px}
+.acct-code{font-family:var(--mono);font-size:clamp(28px,8vw,36px);font-weight:600;letter-spacing:.05em;color:var(--ink);background:none;border:0;padding:0;cursor:pointer;line-height:1;font-variant-numeric:tabular-nums;transition:color .3s}
+.acct.urgent .acct-code{color:var(--bad)}
+.acct-code .sp{display:inline-block;width:.32em}
+.acct-code.flip{animation:codeflip .4s ease}
+@keyframes codeflip{0%{opacity:1}45%{opacity:0;transform:translateY(-6px)}55%{opacity:0;transform:translateY(6px)}100%{opacity:1;transform:none}}
+.copyhint{font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--muted2);transition:color .15s}
+.copyhint.copied{color:var(--ok)}
+
+.ring{margin-left:auto;position:relative;width:48px;height:48px;flex:none}
+.ring svg{transform:rotate(-90deg);display:block}
+.ring .trk{stroke:#e6e9ef}
+.ring .prg{stroke:var(--teal);stroke-linecap:round;transition:stroke .3s}
+.acct.urgent .ring .prg{stroke:var(--bad)}
+.ring .ct{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--mono);font-size:13px;color:var(--muted)}
+
+.acct-controls{display:flex;gap:6px;border-top:1px solid #eef1f5;padding-top:12px;margin-top:8px}
+.linkbtn{background:none;border:0;font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);cursor:pointer;padding:6px 9px;border-radius:8px;transition:.12s}
+.linkbtn:hover{background:#f1f4f8;color:var(--ink)}
+.linkbtn.danger:hover{color:var(--bad)}
+
+.secret-box{margin-top:12px;background:#f7f9fb;border:1px solid #e7ecf1;border-radius:10px;padding:12px 13px;font-family:var(--mono);font-size:12px;color:var(--ink2);word-break:break-all;display:none}
+.secret-box.show{display:block}
+.secret-box .lab{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted2);margin-bottom:5px}
+.secret-box .uri{margin-top:12px;color:var(--muted)}
+
+.empty{background:var(--panel);border:1px dashed #c4ccd6;border-radius:var(--radius);box-shadow:var(--shadow);padding:50px 24px;text-align:center}
+.empty .mark{width:52px;height:52px;margin:0 auto 16px;border-radius:14px;display:grid;place-items:center;font-size:24px;color:#fff;background:linear-gradient(135deg,var(--teal),var(--purple))}
+.empty h2{margin:0 0 6px;font-size:20px;color:var(--ink)}
+.empty p{margin:0 0 18px;color:var(--muted)}
+
+@media (prefers-reduced-motion: reduce){
+  .acct-code.flip{animation:none}
+  *{transition:none !important}
+}
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <span class="t">Cadence</span>
+      <span class="s">TOTP · RFC 6238</span>
+    </div>
+    <div class="spacer"></div>
+    <div class="tools">
+      <button class="btn btn-ghost" id="saveBtn" title="Download a backup file you keep on disk">⤓ Save</button>
+      <button class="btn btn-ghost" id="restoreBtn" title="Load accounts from a backup file">⤒ Restore</button>
+      <button class="btn btn-primary" id="toggleComposer">+ Add account</button>
+      <input type="file" id="importFile" accept="application/json,.json" hidden />
+    </div>
+  </div>
+
+  <main class="main">
+    <div class="pagehead">
+      <div class="big">C</div>
+      <div>
+        <div class="eyebrow">Authenticator</div>
+        <h1>Your codes</h1>
+        <p>Time-based one-time passwords, generated locally in your browser. Add an account to begin. This should only be used for testing purposes.</p>
+      </div>
+
+    </div>
+<br/>
+    <div class="card" id="composer">
+      <header><h3>Add an account</h3></header>
+      <p class="muted" style="margin:0 0 16px;font-size:13.5px">Paste a base32 secret or a full <span class="mono">otpauth://</span> link — whichever you have. No secret yet? Generate one.</p>
+      <div class="form-row">
+        <label>Secret or otpauth link</label>
+        <input id="secretInput" placeholder="JBSWY3DPEHPK3PXP   or   otpauth://totp/..." autocomplete="off" spellcheck="false" />
+      </div>
+      <div class="flex gap-12" style="flex-wrap:wrap">
+        <div class="form-row" style="flex:1;min-width:200px"><label>Issuer</label><input id="issuerInput" placeholder="Acme Inc" autocomplete="off" /></div>
+        <div class="form-row" style="flex:1;min-width:200px"><label>Account</label><input id="accountInput" placeholder="you@example.com" autocomplete="off" /></div>
+      </div>
+      <div class="flex gap-8" style="flex-wrap:wrap;align-items:center">
+        <button class="btn btn-primary" id="addBtn">Add account</button>
+        <button class="btn btn-purple" id="genBtn">Generate new secret</button>
+        <span class="spacer"></span>
+        <button class="btn btn-outline" id="cancelBtn">Cancel</button>
+      </div>
+      <div class="alert alert-bad" id="composerErr" style="display:none;margin:16px 0 0"></div>
+    </div>
+
+    <div id="list"></div>
+
+<p><div class="badge badge-red">Important &mdash; this tool has been created with the aid of AI! It has only gone through some cursory security checks. Don't use this to access production systems!</div></p>
+
+    <p class="mt-22"><span class="badge badge-info" id="storageStatus">…</span></p>
+
+    <p class="muted text-center mono" style="font-size:11px;margin-top:26px">
+      Codes via the Web Crypto API · HMAC-SHA1 truncation · proof of concept
+    </p>
+  </main>
+
+<script>
+"use strict";
+
+/* ---------- base32 (RFC 4648) ---------- */
+const B32 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+
+function base32Decode(str) {
+  const s = str.replace(/=+$/, "").replace(/\s+/g, "").toUpperCase();
+  let bits = 0, value = 0;
+  const out = [];
+  for (const ch of s) {
+    const idx = B32.indexOf(ch);
+    if (idx === -1) throw new Error("not valid base32");
+    value = (value << 5) | idx;
+    bits += 5;
+    if (bits >= 8) { out.push((value >>> (bits - 8)) & 0xff); bits -= 8; }
+  }
+  return new Uint8Array(out);
+}
+
+function base32Encode(bytes) {
+  let bits = 0, value = 0, out = "";
+  for (const b of bytes) {
+    value = (value << 8) | b; bits += 8;
+    while (bits >= 5) { out += B32[(value >>> (bits - 5)) & 31]; bits -= 5; }
+  }
+  if (bits > 0) out += B32[(value << (5 - bits)) & 31];
+  return out;
+}
+
+/* ---------- HOTP / TOTP via Web Crypto ---------- */
+const ALGO_MAP = { "SHA1": "SHA-1", "SHA256": "SHA-256", "SHA512": "SHA-512" };
+
+function getKey(acct) {
+  if (!acct._key) {
+    acct._key = crypto.subtle.importKey(
+      "raw", acct.secretBytes,
+      { name: "HMAC", hash: ALGO_MAP[acct.algo] || "SHA-1" },
+      false, ["sign"]
+    );
+  }
+  return acct._key;
+}
+
+async function hotp(acct, counter) {
+  const key = await getKey(acct);
+  const buf = new ArrayBuffer(8);
+  const dv = new DataView(buf);
+  dv.setUint32(0, Math.floor(counter / 0x100000000));
+  dv.setUint32(4, counter >>> 0);
+  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", key, buf));
+  const offset = sig[sig.length - 1] & 0x0f;
+  const bin =
+    ((sig[offset] & 0x7f) << 24) |
+    (sig[offset + 1] << 16) |
+    (sig[offset + 2] << 8) |
+    (sig[offset + 3]);
+  return (bin % (10 ** acct.digits)).toString().padStart(acct.digits, "0");
+}
+
+/* ---------- parsing ---------- */
+function parseInput(raw, issuerField, accountField) {
+  raw = raw.trim();
+  if (raw.toLowerCase().startsWith("otpauth://")) return parseURI(raw);
+  const secretBytes = base32Decode(raw); // throws if invalid
+  return {
+    issuer: issuerField.trim() || "Account",
+    account: accountField.trim() || "",
+    secretB32: raw.replace(/\s+/g, "").toUpperCase().replace(/=+$/, ""),
+    secretBytes, digits: 6, period: 30, algo: "SHA1",
+  };
+}
+
+function parseURI(uri) {
+  const u = new URL(uri);
+  if (u.protocol !== "otpauth:" || u.host.toLowerCase() !== "totp")
+    throw new Error("link must be otpauth://totp/...");
+  const label = decodeURIComponent(u.pathname.replace(/^\//, ""));
+  let issuer = u.searchParams.get("issuer") || "";
+  let account = label;
+  if (label.includes(":")) {
+    const [a, b] = label.split(":");
+    if (!issuer) issuer = a.trim();
+    account = b.trim();
+  }
+  const secret = u.searchParams.get("secret");
+  if (!secret) throw new Error("link has no secret");
+  return {
+    issuer: issuer || "Account",
+    account,
+    secretB32: secret.toUpperCase().replace(/=+$/, ""),
+    secretBytes: base32Decode(secret),
+    digits: parseInt(u.searchParams.get("digits") || "6", 10),
+    period: parseInt(u.searchParams.get("period") || "30", 10),
+    algo: (u.searchParams.get("algorithm") || "SHA1").toUpperCase(),
+  };
+}
+
+function provisioningURI(acct) {
+  const label = encodeURIComponent(`${acct.issuer}:${acct.account}`);
+  const p = new URLSearchParams({
+    secret: acct.secretB32, issuer: acct.issuer,
+    algorithm: acct.algo, digits: String(acct.digits), period: String(acct.period),
+  });
+  return `otpauth://totp/${label}?${p.toString()}`;
+}
+
+/* ---------- local persistence ----------
+   Works when opened in a normal browser. In sandboxes that block storage
+   (like the in-chat preview) every call safely no-ops, so the app still runs. */
+const STORE_KEY = "cadence.accounts.v1";
+const store = (() => {
+  let ok = false;
+  try {
+    const probe = "__cadence_probe__";
+    window.localStorage.setItem(probe, "1");
+    window.localStorage.removeItem(probe);
+    ok = true;
+  } catch (_) { ok = false; }
+  return {
+    available: ok,
+    load() {
+      if (!ok) return [];
+      try { return JSON.parse(window.localStorage.getItem(STORE_KEY) || "[]"); }
+      catch (_) { return []; }
+    },
+    save(list) {
+      if (!ok) return false;
+      try { window.localStorage.setItem(STORE_KEY, JSON.stringify(list)); return true; }
+      catch (_) { return false; }
+    },
+  };
+})();
+
+function serialize() {
+  return accounts.map(a => ({
+    issuer: a.issuer, account: a.account, secretB32: a.secretB32,
+    digits: a.digits, period: a.period, algo: a.algo,
+  }));
+}
+function persist() { store.save(serialize()); }
+
+function hydrate(p) {
+  return {
+    issuer: p.issuer || "Account",
+    account: p.account || "",
+    secretB32: p.secretB32,
+    secretBytes: base32Decode(p.secretB32),
+    digits: p.digits || 6,
+    period: p.period || 30,
+    algo: (p.algo || "SHA1").toUpperCase(),
+  };
+}
+
+/* ---------- state ---------- */
+const accounts = [];
+let nextId = 1;
+const listEl = document.getElementById("list");
+
+function addAccount(data) {
+  const acct = { id: nextId++, revealed: false, _counter: null, _code: "", ...data };
+  accounts.push(acct);
+  renderList();
+  persist();
+  return acct;
+}
+
+function removeAccount(id) {
+  const i = accounts.findIndex(a => a.id === id);
+  if (i !== -1) { accounts.splice(i, 1); renderList(); persist(); }
+}
+
+/* ---------- rendering ---------- */
+const RING_R = 21;
+const RING_C = 2 * Math.PI * RING_R;
+
+function groupDigits(code) {
+  const mid = code.length === 8 ? 4 : Math.ceil(code.length / 2);
+  return `${code.slice(0, mid)}<span class="sp"></span>${code.slice(mid)}`;
+}
+
+function renderList() {
+  listEl.innerHTML = "";
+  if (accounts.length === 0) {
+    listEl.innerHTML = `
+      <div class="empty">
+        <div class="mark">⏱</div>
+        <h2>No accounts yet</h2>
+        <p>Add your first account to start generating codes.</p>
+        <button class="btn btn-primary" id="emptyAdd">+ Add account</button>
+      </div>`;
+    document.getElementById("emptyAdd").onclick = () => openComposer(true);
+    return;
+  }
+
+  for (const acct of accounts) {
+    const card = document.createElement("div");
+    card.className = "card flush acct";
+    card.dataset.id = acct.id;
+    card.innerHTML = `
+      <header>
+        <span class="ref">${escapeHtml(acct.algo)} · ${acct.period}s</span>
+        <h3>${escapeHtml(acct.issuer)}</h3>
+        <span class="meta-right">${escapeHtml(acct.account || "—")}</span>
+      </header>
+      <div class="acct-body">
+        <button class="acct-code" title="Click to copy">------</button>
+        <span class="copyhint">tap to copy</span>
+        <div class="ring">
+          <svg width="48" height="48" viewBox="0 0 48 48">
+            <circle class="trk" cx="24" cy="24" r="${RING_R}" fill="none" stroke-width="3.5"/>
+            <circle class="prg" cx="24" cy="24" r="${RING_R}" fill="none" stroke-width="3.5"
+                    stroke-dasharray="${RING_C}" stroke-dashoffset="0"/>
+          </svg>
+          <div class="ct">--</div>
+        </div>
+      </div>
+      <div class="acct-controls">
+        <button class="linkbtn reveal">show secret</button>
+        <button class="linkbtn danger remove">remove</button>
+      </div>
+      <div class="secret-box"></div>
+    `;
+    listEl.appendChild(card);
+
+    acct._el = {
+      card,
+      code: card.querySelector(".acct-code"),
+      copyhint: card.querySelector(".copyhint"),
+      progress: card.querySelector(".prg"),
+      count: card.querySelector(".ct"),
+      secretBox: card.querySelector(".secret-box"),
+      revealBtn: card.querySelector(".reveal"),
+    };
+    acct._counter = null; // force recompute on next tick
+
+    acct._el.code.onclick = () => copyCode(acct);
+    card.querySelector(".remove").onclick = () => removeAccount(acct.id);
+    acct._el.revealBtn.onclick = () => toggleSecret(acct);
+  }
+}
+
+function toggleSecret(acct) {
+  acct.revealed = !acct.revealed;
+  const box = acct._el.secretBox;
+  acct._el.revealBtn.textContent = acct.revealed ? "hide secret" : "show secret";
+  if (acct.revealed) {
+    box.innerHTML = `
+      <span class="lab">Secret (base32)</span>${escapeHtml(acct.secretB32)}
+      <div class="uri"><span class="lab">Provisioning link</span>${escapeHtml(provisioningURI(acct))}</div>`;
+    box.classList.add("show");
+  } else {
+    box.classList.remove("show");
+  }
+}
+
+async function copyCode(acct) {
+  try {
+    await navigator.clipboard.writeText(acct._code);
+  } catch {
+    const t = document.createElement("textarea");
+    t.value = acct._code; document.body.appendChild(t); t.select();
+    document.execCommand("copy"); t.remove();
+  }
+  const h = acct._el.copyhint;
+  h.textContent = "copied"; h.classList.add("copied");
+  clearTimeout(acct._copyT);
+  acct._copyT = setTimeout(() => {
+    h.textContent = "tap to copy"; h.classList.remove("copied");
+  }, 1400);
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+/* ---------- the heartbeat ---------- */
+function tick() {
+  const now = Date.now() / 1000;
+  for (const acct of accounts) {
+    if (!acct._el) continue;
+    const remaining = acct.period - (now % acct.period);
+    const frac = remaining / acct.period;
+
+    acct._el.progress.style.strokeDashoffset = (RING_C * (1 - frac)).toFixed(2);
+    acct._el.count.textContent = Math.ceil(remaining);
+    acct._el.card.classList.toggle("urgent", remaining <= 5);
+
+    const counter = Math.floor(now / acct.period);
+    if (acct._counter !== counter) {
+      acct._counter = counter;
+      hotp(acct, counter).then(code => {
+        acct._code = code;
+        const el = acct._el.code;
+        el.innerHTML = groupDigits(code);
+        el.classList.remove("flip");
+        void el.offsetWidth;       // restart animation
+        el.classList.add("flip");
+      });
+    }
+  }
+  requestAnimationFrame(tick);
+}
+
+/* ---------- composer wiring ---------- */
+const composer = document.getElementById("composer");
+const secretInput = document.getElementById("secretInput");
+const issuerInput = document.getElementById("issuerInput");
+const accountInput = document.getElementById("accountInput");
+const errEl = document.getElementById("composerErr");
+
+function showErr(msg) {
+  if (!msg) { errEl.style.display = "none"; errEl.textContent = ""; return; }
+  errEl.textContent = msg; errEl.style.display = "block";
+}
+
+function openComposer(open) {
+  composer.classList.toggle("open", open);
+  if (open) { showErr(""); secretInput.focus(); }
+}
+document.getElementById("toggleComposer").onclick = () =>
+  openComposer(!composer.classList.contains("open"));
+document.getElementById("cancelBtn").onclick = () => openComposer(false);
+
+document.getElementById("addBtn").onclick = () => {
+  showErr("");
+  try {
+    const data = parseInput(secretInput.value, issuerInput.value, accountInput.value);
+    addAccount(data);
+    secretInput.value = issuerInput.value = accountInput.value = "";
+    openComposer(false);
+  } catch (e) {
+    showErr("Couldn't read that — " + e.message + ".");
+  }
+};
+
+document.getElementById("genBtn").onclick = () => {
+  showErr("");
+  const bytes = crypto.getRandomValues(new Uint8Array(20));
+  const secret = base32Encode(bytes);
+  const acct = addAccount({
+    issuer: issuerInput.value.trim() || "New account",
+    account: accountInput.value.trim() || "you@example.com",
+    secretB32: secret, secretBytes: bytes,
+    digits: 6, period: 30, algo: "SHA1",
+  });
+  toggleSecret(acct); // reveal the freshly minted secret + link
+  secretInput.value = issuerInput.value = accountInput.value = "";
+  openComposer(false);
+};
+
+secretInput.addEventListener("keydown", e => { if (e.key === "Enter") document.getElementById("addBtn").click(); });
+
+/* ---------- backup: save to disk + restore ---------- */
+const saveBtn = document.getElementById("saveBtn");
+const restoreBtn = document.getElementById("restoreBtn");
+const importFile = document.getElementById("importFile");
+
+function flash(btn, text, ms) {
+  const old = btn.dataset.label || btn.textContent;
+  btn.dataset.label = old;
+  btn.textContent = text;
+  setTimeout(() => { btn.textContent = btn.dataset.label; }, ms || 1500);
+}
+
+saveBtn.onclick = () => {
+  const payload = {
+    app: "cadence", version: 1,
+    exportedAt: new Date().toISOString(),
+    accounts: serialize(),
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "cadence-backup.json";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  flash(saveBtn, "✓ Saved", 1400);
+};
+
+restoreBtn.onclick = () => importFile.click();
+importFile.onchange = () => {
+  const file = importFile.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      const incoming = Array.isArray(data) ? data : (data.accounts || []);
+      let added = 0;
+      for (const p of incoming) {
+        if (!p || !p.secretB32) continue;
+        const dup = accounts.some(a =>
+          a.secretB32 === p.secretB32 &&
+          a.issuer === (p.issuer || "Account") &&
+          a.account === (p.account || ""));
+        if (dup) continue;
+        addAccount(hydrate(p));
+        added++;
+      }
+      flash(restoreBtn, added ? `✓ Added ${added}` : "Up to date", 1600);
+    } catch (_) {
+      flash(restoreBtn, "✕ Bad file", 1600);
+    }
+    importFile.value = "";
+  };
+  reader.readAsText(file);
+};
+
+/* ---------- boot ---------- */
+(function boot() {
+  store.load().forEach(p => { try { addAccount(hydrate(p)); } catch (_) {} });
+  renderList(); // shows the empty state when there are no saved accounts
+
+  const status = document.getElementById("storageStatus");
+  status.className = "badge " + (store.available ? "badge-ok" : "badge-warn");
+  status.textContent = store.available
+    ? "Saved on this device — accounts persist until this browser's data is cleared"
+    : "Preview runs in memory — download this file and open it in your browser to save accounts";
+
+  requestAnimationFrame(tick);
+})();
+</script>
+<div class="callout"><strong>Important &mdash; this tool has been created with the aid of AI!</strong> It has only gone through some cursory security checks. The main risk is likely to come from the ability to upload JSON files. Don't upload any JSON files if you aren't certain of their origin.</div>
+
+
+</body>
+</html>
