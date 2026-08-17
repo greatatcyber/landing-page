@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Focus Timer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@200;400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:        #061826;
+    --ink-2:      #0A2739;
+    --line:       rgba(255,255,255,.10);
+    --line-soft:  rgba(255,255,255,.05);
+    --mist:       #E9F1F5;
+    --muted:      #8AA5B6;
+    --green:      #7DC242;
+    --teal:       #00A6B8;
+    --alert:      #FF4A47;
+    --radius:     3px;
+    --display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+    --body: "Inter", "Helvetica Neue", Arial, sans-serif;
+  }
+
+  *{ box-sizing:border-box; }
+
+  html,body{ height:100%; }
+
+  body{
+    margin:0;
+    font-family:var(--body);
+    color:var(--mist);
+    background-color:var(--ink);
+    background-image:
+      radial-gradient(120% 90% at 50% -10%, rgba(0,166,184,.16), transparent 60%),
+      radial-gradient(90% 70% at 50% 110%, rgba(125,194,66,.10), transparent 60%),
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='56' height='97' viewBox='0 0 56 97'><g fill='none' stroke='%23ffffff' stroke-opacity='0.05' stroke-width='1'><path d='M28 1 L55 16.5 L55 48.5 L28 64 L1 48.5 L1 16.5 Z'/><path d='M28 49 L55 64.5 L55 96.5'/><path d='M28 49 L1 64.5 L1 96.5'/></g></svg>");
+    background-repeat:no-repeat, no-repeat, repeat;
+    background-size:auto, auto, 56px 97px;
+    display:flex;
+    flex-direction:column;
+    min-height:100dvh;
+  }
+
+  /* ---------- Header ---------- */
+  header{
+    display:flex; align-items:center; gap:12px;
+    padding:20px clamp(16px,5vw,40px);
+    border-bottom:1px solid var(--line-soft);
+  }
+  .mark{ width:26px; height:29px; flex:none; }
+  .wordmark{
+    font-family:var(--display); font-weight:600; font-size:17px;
+    letter-spacing:.02em;
+  }
+  .kicker{
+    margin-left:auto;
+    font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--muted);
+  }
+
+  /* ---------- Layout ---------- */
+  main{
+    flex:1;
+    width:100%; max-width:1040px; margin:0 auto;
+    padding:clamp(20px,5vw,48px) clamp(16px,5vw,40px) 56px;
+    display:grid; gap:clamp(24px,4vw,48px);
+    grid-template-columns:1fr;
+    align-content:start;
+  }
+  @media (min-width:900px){
+    main{ grid-template-columns:minmax(0,1fr) 320px; align-items:start; }
+    .panel--options{ position:sticky; top:32px; }
+  }
+
+  .eyebrow{
+    font-size:11px; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--teal); margin:0 0 10px;
+  }
+
+  /* ---------- Clock ---------- */
+  .stage{ display:flex; flex-direction:column; align-items:center; }
+  .face{
+    width:min(100%, 420px); aspect-ratio:1/1;
+    display:block;
+  }
+  .face[hidden]{ display:none; }
+
+  .hex-track{ stroke:rgba(255,255,255,.10); }
+  .hex-progress{
+    stroke:var(--green);
+    transition:stroke .3s ease;
+  }
+  .is-alert .hex-progress,
+  .is-alert .hand-second,
+  .is-alert .digits{ stroke:var(--alert); color:var(--alert); }
+  .is-alert .sweep{ fill:rgba(255,74,71,.22); stroke:var(--alert); }
+
+  /* completion: the hexagon flashes three times */
+  .is-done .hex-progress{
+    stroke:var(--alert);
+    stroke-width:6;
+    transition:none;
+    animation:hexFlash .46s ease-in-out 3;
+  }
+  @keyframes hexFlash{
+    0%, 100%{ opacity:1; }
+    50%{ opacity:.04; }
+  }
+
+  .sweep{
+    fill:rgba(125,194,66,.20);
+    stroke:rgba(125,194,66,.55);
+    stroke-width:1;
+    transition:fill .3s ease, stroke .3s ease;
+  }
+  .tick{ stroke:rgba(255,255,255,.22); }
+  .tick--major{ stroke:rgba(255,255,255,.55); }
+  .hand-minute{ stroke:var(--mist); }
+  .hand-second{ stroke:var(--green); transition:stroke .3s ease; }
+  .numeral{
+    fill:var(--muted); font-family:var(--display); font-size:15px; font-weight:400;
+    text-anchor:middle; dominant-baseline:central;
+  }
+
+  .digits{
+    font-family:var(--display);
+    font-weight:200;
+    font-variant-numeric:tabular-nums;
+    font-size:64px;
+    letter-spacing:-.02em;
+    fill:currentColor;
+    color:var(--mist);
+    text-anchor:middle; dominant-baseline:central;
+    transition:color .3s ease;
+  }
+  .digits--long{ font-size:48px; }
+  .sublabel{
+    font-family:var(--body); font-size:11px; font-weight:500;
+    letter-spacing:.18em; text-transform:uppercase;
+    fill:var(--muted); text-anchor:middle;
+  }
+
+  .status{
+    margin:18px 0 0; min-height:20px;
+    font-size:13px; letter-spacing:.04em; color:var(--muted); text-align:center;
+  }
+  .status[data-tone="alert"]{ color:var(--alert); }
+  .status[data-tone="done"]{ color:var(--green); }
+
+  /* ---------- Controls ---------- */
+  .controls{
+    display:flex; gap:10px; flex-wrap:wrap; justify-content:center;
+    margin-top:22px; width:100%;
+  }
+  button{ font-family:var(--body); cursor:pointer; }
+  .btn{
+    border-radius:var(--radius);
+    padding:14px 30px;
+    font-size:13px; font-weight:600; letter-spacing:.1em; text-transform:uppercase;
+    border:1px solid transparent;
+    transition:background .18s ease, border-color .18s ease, color .18s ease, transform .1s ease;
+  }
+  .btn:active{ transform:translateY(1px); }
+  .btn--primary{ background:var(--green); color:#06202B; }
+  .btn--primary:hover{ background:#8FD44F; }
+  .btn--ghost{ background:transparent; color:var(--mist); border-color:var(--line); }
+  .btn--ghost:hover{ border-color:rgba(255,255,255,.35); background:rgba(255,255,255,.04); }
+  .btn[disabled]{ opacity:.4; cursor:not-allowed; }
+
+  :where(button,select,input,a):focus-visible{
+    outline:2px solid var(--teal); outline-offset:3px;
+  }
+
+  /* ---------- Options ---------- */
+  .panel--options{
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    background:rgba(255,255,255,.025);
+    padding:22px;
+  }
+  .panel--options[hidden]{ display:none; }
+  .field{ margin-bottom:22px; }
+  .field:last-child{ margin-bottom:0; }
+  .field > label,
+  .field > .field-label{
+    display:block; margin-bottom:9px;
+    font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted);
+  }
+
+  .segmented{ display:flex; border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; }
+  .segmented button{
+    flex:1; padding:11px 8px; background:transparent; border:0; color:var(--muted);
+    font-size:12px; font-weight:600; letter-spacing:.1em; text-transform:uppercase;
+    transition:background .18s ease, color .18s ease;
+  }
+  .segmented button[aria-pressed="true"]{ background:var(--green); color:#06202B; }
+  .segmented button:not([aria-pressed="true"]):hover{ background:rgba(255,255,255,.05); color:var(--mist); }
+
+  .duration{ display:flex; align-items:flex-end; gap:8px; }
+  .duration > div{ flex:1; }
+  .duration small{
+    display:block; margin-top:6px; font-size:10px; letter-spacing:.14em;
+    text-transform:uppercase; color:var(--muted);
+  }
+  input[type="number"], select{
+    width:100%; padding:11px 12px;
+    background:rgba(255,255,255,.04);
+    border:1px solid var(--line); border-radius:var(--radius);
+    color:var(--mist); font-family:var(--display); font-size:16px;
+    font-variant-numeric:tabular-nums;
+  }
+  select{ font-family:var(--body); font-size:14px; appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='8'><path d='M1 1l5 5 5-5' fill='none' stroke='%238AA5B6' stroke-width='1.5'/></svg>");
+    background-repeat:no-repeat; background-position:right 12px center;
+    padding-right:34px;
+  }
+
+  .presets{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .presets button{
+    padding:8px 12px; font-size:12px;
+    background:transparent; color:var(--muted);
+    border:1px solid var(--line); border-radius:var(--radius);
+    font-variant-numeric:tabular-nums;
+  }
+  .presets button:hover{ color:var(--mist); border-color:rgba(255,255,255,.3); }
+
+  .sound-row{ display:flex; gap:8px; }
+  .sound-row select{ flex:1; }
+  .sound-row button{
+    flex:none; padding:0 16px; font-size:12px; letter-spacing:.08em; text-transform:uppercase;
+    background:transparent; color:var(--mist); border:1px solid var(--line); border-radius:var(--radius);
+  }
+  .sound-row button:hover{ border-color:rgba(255,255,255,.35); }
+
+  .hint{ font-size:12px; line-height:1.6; color:var(--muted); margin:0; }
+
+  footer{
+    padding:18px clamp(16px,5vw,40px) 28px;
+    border-top:1px solid var(--line-soft);
+    font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:rgba(138,165,182,.7);
+    text-align:center;
+  }
+
+  @media (prefers-reduced-motion:reduce){
+    *{ transition:none !important; animation:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <svg class="mark" viewBox="0 0 52 60" aria-hidden="true">
+    <path d="M26 2 L48 15 L48 45 L26 58 L4 45 L4 15 Z" fill="none" stroke="#7DC242" stroke-width="3"/>
+    <path d="M26 2 L48 15 L48 45" fill="none" stroke="#00A6B8" stroke-width="3"/>
+  </svg>
+  <span class="wordmark">Focus Timer</span>
+  <span class="kicker" id="modeKicker">Analogue</span>
+</header>
+
+<main>
+  <section class="stage">
+    <!-- ANALOGUE -->
+    <svg class="face" id="faceAnalogue" viewBox="0 0 400 400" role="img" aria-label="Analogue countdown face">
+      <path id="hexTrackA" class="hex-track" fill="none" stroke-width="4" stroke-linejoin="round"
+            d="M200 12 L360 104 L360 296 L200 388 L40 296 L40 104 Z"/>
+      <path id="hexProgressA" class="hex-progress" fill="none" stroke-width="4" stroke-linejoin="round"
+            d="M200 12 L360 104 L360 296 L200 388 L40 296 L40 104 Z"/>
+      <circle cx="200" cy="200" r="152" fill="rgba(255,255,255,.02)" stroke="rgba(255,255,255,.07)"/>
+      <g id="ticks"></g>
+      <g id="numerals"></g>
+      <path id="sweep" class="sweep" d=""/>
+      <line id="handMinute" class="hand-minute" x1="200" y1="200" x2="200" y2="112"
+            stroke-width="5" stroke-linecap="round"/>
+      <line id="handSecond" class="hand-second" x1="200" y1="216" x2="200" y2="60"
+            stroke-width="2.5" stroke-linecap="round"/>
+      <circle cx="200" cy="200" r="6" fill="#061826" stroke="currentColor" class="hand-second" stroke-width="2.5"/>
+    </svg>
+
+    <!-- DIGITAL -->
+    <svg class="face" id="faceDigital" viewBox="0 0 400 400" role="img" aria-label="Digital countdown face" hidden>
+      <path id="hexTrackD" class="hex-track" fill="none" stroke-width="4" stroke-linejoin="round"
+            d="M200 12 L360 104 L360 296 L200 388 L40 296 L40 104 Z"/>
+      <path id="hexProgressD" class="hex-progress" fill="none" stroke-width="4" stroke-linejoin="round"
+            d="M200 12 L360 104 L360 296 L200 388 L40 296 L40 104 Z"/>
+      <text id="digits" class="digits" x="200" y="196">25:00</text>
+      <text id="digitalLabel" class="sublabel" x="200" y="252">Remaining</text>
+    </svg>
+
+    <p class="status" id="status" role="status" aria-live="polite">Ready when you are.</p>
+
+    <div class="controls">
+      <button class="btn btn--primary" id="startStop">Start</button>
+      <button class="btn btn--ghost" id="reset">Reset</button>
+      <button class="btn btn--ghost" id="optionsToggle" aria-expanded="false" aria-controls="options">Options</button>
+    </div>
+  </section>
+
+  <aside class="panel--options" id="options" hidden>
+    <p class="eyebrow">Options</p>
+
+    <div class="field">
+      <span class="field-label">Face</span>
+      <div class="segmented" role="group" aria-label="Face type">
+        <button id="faceAnalogueBtn" aria-pressed="true">Analogue</button>
+        <button id="faceDigitalBtn" aria-pressed="false">Digital</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <span class="field-label">Countdown length</span>
+      <div class="duration">
+        <div>
+          <input type="number" id="inHours" min="0" max="23" value="0" inputmode="numeric" aria-label="Hours">
+          <small>Hours</small>
+        </div>
+        <div>
+          <input type="number" id="inMinutes" min="0" max="59" value="25" inputmode="numeric" aria-label="Minutes">
+          <small>Minutes</small>
+        </div>
+        <div>
+          <input type="number" id="inSeconds" min="0" max="59" value="0" inputmode="numeric" aria-label="Seconds">
+          <small>Seconds</small>
+        </div>
+      </div>
+      <div class="presets" id="presets">
+        <button data-mins="1">1 min</button>
+        <button data-mins="5">5 min</button>
+        <button data-mins="10">10 min</button>
+        <button data-mins="15">15 min</button>
+        <button data-mins="20">20 min</button>
+        <button data-mins="25">25 min</button>
+        <button data-mins="45">45 min</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="soundSelect">Completion sound</label>
+      <div class="sound-row">
+        <select id="soundSelect">
+          <option value="chime">Chime</option>
+          <option value="bell">Bell</option>
+          <option value="pulse">Pulse</option>
+          <option value="rise">Rise</option>
+          <option value="none">Silent</option>
+        </select>
+        <button id="testSound" type="button">Play</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <p class="hint">Space starts and pauses. R resets. The last ten seconds turn red.</p>
+    </div>
+  </aside>
+</main>
+
+<footer>Hexagon marks the whole countdown &middot; the sweep marks the minute</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ---------------- state ---------------- */
+  var totalMs = 25 * 60 * 1000;
+  var remainingMs = totalMs;
+  var running = false;
+  var finished = false;
+  var endAt = 0;
+  var rafId = null;
+  var faceMode = "analogue";
+  var soundName = "chime";
+  var ALERT_MS = 10000;
+
+  var el = function (id) { return document.getElementById(id); };
+
+  var faceA = el("faceAnalogue"), faceD = el("faceDigital");
+  var sweep = el("sweep"), handSecond = el("handSecond"), handMinute = el("handMinute");
+  var digits = el("digits"), digitalLabel = el("digitalLabel");
+  var statusEl = el("status"), kicker = el("modeKicker");
+  var startStop = el("startStop"), resetBtn = el("reset");
+  var hexA = el("hexProgressA"), hexD = el("hexProgressD");
+  var inH = el("inHours"), inM = el("inMinutes"), inS = el("inSeconds");
+
+  var HEX_LEN = hexA.getTotalLength();
+  [hexA, hexD].forEach(function (p) {
+    p.style.strokeDasharray = HEX_LEN + " " + HEX_LEN;
+    p.style.strokeDashoffset = 0;
+  });
+
+  /* ---------------- face furniture ---------------- */
+  var CX = 200, CY = 200;
+
+  function pointAt(angleDeg, radius) {
+    var a = (angleDeg - 90) * Math.PI / 180;
+    return { x: CX + radius * Math.cos(a), y: CY + radius * Math.sin(a) };
+  }
+
+  (function drawTicks() {
+    var ticks = el("ticks"), nums = el("numerals"), i, major, p1, p2, t, p;
+    for (i = 0; i < 60; i++) {
+      major = i % 5 === 0;
+      p1 = pointAt(i * 6, major ? 128 : 136);
+      p2 = pointAt(i * 6, 144);
+      var line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", p1.x.toFixed(2)); line.setAttribute("y1", p1.y.toFixed(2));
+      line.setAttribute("x2", p2.x.toFixed(2)); line.setAttribute("y2", p2.y.toFixed(2));
+      line.setAttribute("stroke-width", major ? 2.5 : 1);
+      line.setAttribute("class", major ? "tick tick--major" : "tick");
+      ticks.appendChild(line);
+    }
+    for (i = 0; i < 12; i++) {
+      p = pointAt(i * 30, 106);
+      t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      t.setAttribute("x", p.x.toFixed(2)); t.setAttribute("y", p.y.toFixed(2));
+      t.setAttribute("class", "numeral");
+      t.textContent = i === 0 ? "60" : String(i * 5);
+      nums.appendChild(t);
+    }
+  }());
+
+  /* the wedge: from the 12 o'clock start position round to the second hand */
+  function sweepPath(fraction) {
+    if (fraction <= 0) return "";
+    var f = Math.min(fraction, 0.99999);
+    var angle = f * 360;
+    var end = pointAt(angle, 144);
+    var large = angle > 180 ? 1 : 0;
+    return "M " + CX + " " + CY + " L " + CX + " " + (CY - 144) +
+           " A 144 144 0 " + large + " 1 " + end.x.toFixed(2) + " " + end.y.toFixed(2) + " Z";
+  }
+
+  function rotateHand(node, angleDeg) {
+    node.setAttribute("transform", "rotate(" + angleDeg.toFixed(3) + " " + CX + " " + CY + ")");
+  }
+
+  /* ---------------- formatting ---------------- */
+  function pad(n) { return n < 10 ? "0" + n : String(n); }
+
+  function format(ms) {
+    var s = Math.ceil(ms / 1000);
+    var h = Math.floor(s / 3600);
+    var m = Math.floor((s % 3600) / 60);
+    var sec = s % 60;
+    return h > 0 ? h + ":" + pad(m) + ":" + pad(sec) : m + ":" + pad(sec);
+  }
+
+  /* ---------------- render ---------------- */
+  function render() {
+    var ms = Math.max(0, remainingMs);
+    var alert = ms <= ALERT_MS && ms < totalMs;
+
+    faceA.classList.toggle("is-alert", alert);
+    faceD.classList.toggle("is-alert", alert);
+
+    /* hexagon = whole countdown; at zero it redraws in full so it can flash */
+    var progress = totalMs > 0 ? ms / totalMs : 0;
+    var off = finished ? 0 : HEX_LEN * (1 - progress);
+    hexA.style.strokeDashoffset = off;
+    hexD.style.strokeDashoffset = off;
+
+    /* analogue */
+    var secs = (ms / 1000) % 60;
+    var secAngle = (secs / 60) * 360;
+    rotateHand(handSecond, secAngle);
+    sweep.setAttribute("d", sweepPath(secs / 60));
+
+    var mins = (ms / 60000) % 60;
+    rotateHand(handMinute, (mins / 60) * 360);
+
+    /* digital */
+    var text = format(ms);
+    digits.textContent = text;
+    digits.classList.toggle("digits--long", text.length > 5);
+    digitalLabel.textContent = finished ? "Time's up" : (running ? "Remaining" : "Paused / ready");
+
+    if (faceA.classList.contains("is-alert") || faceD.classList.contains("is-alert")) {
+      faceA.setAttribute("aria-label", "Countdown, " + text + " remaining, final seconds");
+    } else {
+      faceA.setAttribute("aria-label", "Countdown, " + text + " remaining");
+    }
+  }
+
+  function flashDone() {
+    [faceA, faceD].forEach(function (face) {
+      face.classList.remove("is-done");
+      void face.getBoundingClientRect(); /* forces the animation to restart */
+      face.classList.add("is-done");
+    });
+  }
+
+  function setStatus(text, tone) {
+    statusEl.textContent = text;
+    if (tone) { statusEl.setAttribute("data-tone", tone); }
+    else { statusEl.removeAttribute("data-tone"); }
+  }
+
+  /* ---------------- timer loop ---------------- */
+  function tick() {
+    remainingMs = endAt - performance.now();
+    if (remainingMs <= 0) {
+      remainingMs = 0;
+      running = false;
+      finished = true;
+      rafId = null;
+      startStop.textContent = "Start";
+      startStop.disabled = true;
+      render();
+      flashDone();
+      setStatus("Time's up.", "done");
+      playSound(soundName);
+      return;
+    }
+    if (remainingMs <= ALERT_MS) {
+      setStatus("Final " + Math.ceil(remainingMs / 1000) + " seconds.", "alert");
+    }
+    render();
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function start() {
+    if (running || totalMs <= 0) return;
+    unlockAudio();
+    finished = false;
+    startStop.disabled = false;
+    endAt = performance.now() + remainingMs;
+    running = true;
+    startStop.textContent = "Pause";
+    setStatus("Counting down.");
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function pause() {
+    if (!running) return;
+    cancelAnimationFrame(rafId);
+    rafId = null;
+    running = false;
+    remainingMs = Math.max(0, endAt - performance.now());
+    startStop.textContent = "Resume";
+    setStatus("Paused at " + format(remainingMs) + ".");
+    render();
+  }
+
+  function reset() {
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = null;
+    running = false;
+    finished = false;
+    remainingMs = totalMs;
+    startStop.disabled = totalMs <= 0;
+    startStop.textContent = "Start";
+    faceA.classList.remove("is-alert", "is-done");
+    faceD.classList.remove("is-alert", "is-done");
+    setStatus(totalMs > 0 ? "Ready when you are." : "Set a length above to begin.");
+    render();
+  }
+
+  function setDuration(ms) {
+    totalMs = ms;
+    reset();
+  }
+
+  /* ---------------- sound ---------------- */
+  var ctx = null;
+  function unlockAudio() {
+    if (!ctx) {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) ctx = new AC();
+    }
+    if (ctx && ctx.state === "suspended") ctx.resume();
+  }
+
+  function note(freq, startOffset, duration, type, peak) {
+    var t0 = ctx.currentTime + startOffset;
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.type = type || "sine";
+    osc.frequency.setValueAtTime(freq, t0);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(peak || 0.25, t0 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duration);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(t0);
+    osc.stop(t0 + duration + 0.05);
+    return osc;
+  }
+
+  function playSound(name) {
+    if (name === "none") return;
+    unlockAudio();
+    if (!ctx) return;
+    if (name === "chime") {
+      note(880, 0, 1.1); note(1108.7, 0.16, 1.1); note(1318.5, 0.32, 1.6);
+    } else if (name === "bell") {
+      note(523.25, 0, 2.6, "sine", 0.28);
+      note(1046.5, 0, 2.2, "sine", 0.12);
+      note(1567.9, 0, 1.4, "sine", 0.06);
+      note(2093, 0, 0.8, "sine", 0.04);
+    } else if (name === "pulse") {
+      note(660, 0, 0.18, "triangle", 0.3);
+      note(660, 0.28, 0.18, "triangle", 0.3);
+      note(660, 0.56, 0.18, "triangle", 0.3);
+      note(880, 0.9, 0.5, "triangle", 0.3);
+    } else if (name === "rise") {
+      var t0 = ctx.currentTime;
+      var osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(392, t0);
+      osc.frequency.exponentialRampToValueAtTime(1174.7, t0 + 1.0);
+      gain.gain.setValueAtTime(0.0001, t0);
+      gain.gain.exponentialRampToValueAtTime(0.25, t0 + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.3);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t0); osc.stop(t0 + 1.4);
+    }
+  }
+
+  /* ---------------- wiring ---------------- */
+  startStop.addEventListener("click", function () { running ? pause() : start(); });
+  resetBtn.addEventListener("click", reset);
+
+  var optionsPanel = el("options"), optionsToggle = el("optionsToggle");
+  optionsToggle.addEventListener("click", function () {
+    var open = optionsPanel.hidden;
+    optionsPanel.hidden = !open;
+    optionsToggle.setAttribute("aria-expanded", String(open));
+    optionsToggle.textContent = open ? "Close options" : "Options";
+  });
+
+  function showFace(node, visible) {
+    /* SVG elements have no .hidden property, so set the attribute directly */
+    if (visible) { node.removeAttribute("hidden"); }
+    else { node.setAttribute("hidden", ""); }
+  }
+
+  function setFace(mode) {
+    faceMode = mode;
+    var isA = mode === "analogue";
+    showFace(faceA, isA);
+    showFace(faceD, !isA);
+    el("faceAnalogueBtn").setAttribute("aria-pressed", String(isA));
+    el("faceDigitalBtn").setAttribute("aria-pressed", String(!isA));
+    kicker.textContent = isA ? "Analogue" : "Digital";
+  }
+  el("faceAnalogueBtn").addEventListener("click", function () { setFace("analogue"); });
+  el("faceDigitalBtn").addEventListener("click", function () { setFace("digital"); });
+
+  function readInputs() {
+    var h = Math.min(23, Math.max(0, parseInt(inH.value, 10) || 0));
+    var m = Math.min(59, Math.max(0, parseInt(inM.value, 10) || 0));
+    var s = Math.min(59, Math.max(0, parseInt(inS.value, 10) || 0));
+    inH.value = h; inM.value = m; inS.value = s;
+    setDuration(((h * 3600) + (m * 60) + s) * 1000);
+  }
+  [inH, inM, inS].forEach(function (input) {
+    input.addEventListener("change", readInputs);
+  });
+
+  el("presets").addEventListener("click", function (e) {
+    var btn = e.target.closest("button[data-mins]");
+    if (!btn) return;
+    inH.value = 0; inM.value = btn.getAttribute("data-mins"); inS.value = 0;
+    readInputs();
+  });
+
+  el("soundSelect").addEventListener("change", function (e) { soundName = e.target.value; });
+  el("testSound").addEventListener("click", function () { playSound(soundName); });
+
+  document.addEventListener("keydown", function (e) {
+    var tag = (e.target.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "select" || tag === "textarea") return;
+    if (e.code === "Space") {
+      e.preventDefault();
+      if (!startStop.disabled) { running ? pause() : start(); }
+    } else if (e.key === "r" || e.key === "R") {
+      reset();
+    }
+  });
+
+  setFace("analogue");
+  reset();
+}());
+</script>
+</body>
+</html>
